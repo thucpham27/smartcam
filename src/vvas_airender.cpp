@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define VVAS_GLIB_UTILS 
+#include <vvas_utils/vvas_utils.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -121,42 +123,42 @@ get_label_text (GstInferenceClassification * c, vvas_xoverlaypriv * kpriv,
     char *label_string)
 {
   unsigned char idx = 0, buffIdx = 0;
-  if (!c->class_label || !strlen ((char *) c->class_label))
+  if (!c->classification.class_label || !strlen ((char *) c->classification.class_label))
     return false;
 
   for (idx = 0; idx < kpriv->label_filter_cnt; idx++) {
     if (!strcmp (kpriv->label_filter[idx], "class")) {
-      sprintf (label_string + buffIdx, "%s", (char *) c->class_label);
+      sprintf (label_string + buffIdx, "%s", (char *) c->classification.class_label);
       buffIdx += strlen (label_string);
     } else if (!strcmp (kpriv->label_filter[idx], "probability")) {
-      sprintf (label_string + buffIdx, " : %.2f ", c->class_prob);
+      sprintf (label_string + buffIdx, " : %.2f ", c->classification.class_prob);
       buffIdx += strlen (label_string);
     }
   }
   return true;
 }
 
-static gboolean
-overlay_node_foreach (GNode * node, gpointer kpriv_ptr)
+static bool
+overlay_node_foreach (const VvasTreeNode *node, void *kpriv_ptr)
 {
   vvas_xoverlaypriv *kpriv = (vvas_xoverlaypriv *) kpriv_ptr;
   struct overlayframe_info *frameinfo = &(kpriv->frameinfo);
   LOG_MESSAGE (LOG_LEVEL_DEBUG, "enter");
 
-  GList *classes;
+  VvasList *classes;
   GstInferenceClassification *classification;
   GstInferencePrediction *prediction = (GstInferencePrediction *) node->data;
 
   /* On each children, iterate through the different associated classes */
-  for (classes = prediction->classifications;
-      classes; classes = g_list_next (classes)) {
+  for (classes = prediction->prediction.classifications;
+       classes; classes = classes->next) {
     classification = (GstInferenceClassification *) classes->data;
 
     int idx = vvas_classification_is_allowed ((char *)
-        classification->class_label, kpriv);
+        classification->classification.class_label, kpriv);
     if (kpriv->classes_count && idx == -1)
       continue;
-
+ 
     color clr;
     if (kpriv->classes_count) {
       clr = {
@@ -179,7 +181,7 @@ overlay_node_foreach (GNode * node, gpointer kpriv_ptr)
       textsize = getTextSize (label_string, kpriv->font,
           kpriv->font_size, 1, &baseline);
       /* Get y offset to use in case of classification model */
-      if ((prediction->bbox.height < 1) && (prediction->bbox.width < 1)) {
+      if ((prediction->prediction.bbox.height < 1) && (prediction->prediction.bbox.width < 1)) {
         if (kpriv->y_offset) {
           frameinfo->y_offset = kpriv->y_offset;
         } else {
@@ -190,12 +192,12 @@ overlay_node_foreach (GNode * node, gpointer kpriv_ptr)
 
     LOG_MESSAGE (LOG_LEVEL_INFO,
         "RESULT: (prediction node %ld) %s(%d) %d %d %d %d (%f)",
-        prediction->prediction_id,
-        label_present ? classification->class_label : NULL,
-        classification->class_id, prediction->bbox.x, prediction->bbox.y,
-        prediction->bbox.width + prediction->bbox.x,
-        prediction->bbox.height + prediction->bbox.y,
-        classification->class_prob);
+        prediction->prediction.prediction_id,
+        label_present ? classification->classification.class_label : NULL,
+        classification->classification.class_id, prediction->prediction.bbox.x, prediction->prediction.bbox.y,
+        prediction->prediction.bbox.width + prediction->prediction.bbox.x,
+        prediction->prediction.bbox.height + prediction->prediction.bbox.y,
+        classification->classification.class_prob);
 
     /* Check whether the frame is NV12 or BGR and act accordingly */
     if (frameinfo->inframe->props.fmt == VVAS_VFMT_Y_UV8_420) {
@@ -204,15 +206,15 @@ overlay_node_foreach (GNode * node, gpointer kpriv_ptr)
       unsigned short uvScalar;
       convert_rgb_to_yuv_clrs (clr, &yScalar, &uvScalar);
       /* Draw rectangle on y an uv plane */
-      int new_xmin = floor (prediction->bbox.x / 2) * 2;
-      int new_ymin = floor (prediction->bbox.y / 2) * 2;
+      int new_xmin = floor (prediction->prediction.bbox.x / 2) * 2;
+      int new_ymin = floor (prediction->prediction.bbox.y / 2) * 2;
       int new_xmax =
-          floor ((prediction->bbox.width + prediction->bbox.x) / 2) * 2;
+          floor ((prediction->prediction.bbox.width + prediction->prediction.bbox.x) / 2) * 2;
       int new_ymax =
-          floor ((prediction->bbox.height + prediction->bbox.y) / 2) * 2;
+          floor ((prediction->prediction.bbox.height + prediction->prediction.bbox.y) / 2) * 2;
       Size test_rect (new_xmax - new_xmin, new_ymax - new_ymin);
 
-      if (!(!prediction->bbox.x && !prediction->bbox.y)) {
+      if (!(!prediction->prediction.bbox.x && !prediction->prediction.bbox.y)) {
         rectangle (frameinfo->lumaImg, Point (new_xmin,
               new_ymin), Point (new_xmax,
               new_ymax), Scalar (yScalar), kpriv->line_thickness, 1, 0);
@@ -244,25 +246,25 @@ overlay_node_foreach (GNode * node, gpointer kpriv_ptr)
     } else if (frameinfo->inframe->props.fmt == VVAS_VFMT_BGR8) {
       LOG_MESSAGE (LOG_LEVEL_DEBUG, "Drawing rectangle for BGR image");
 
-      if (!(!prediction->bbox.x && !prediction->bbox.y)) {
+      if (!(!prediction->prediction.bbox.x && !prediction->prediction.bbox.y)) {
         /* Draw rectangle over the dectected object */
-        rectangle (frameinfo->image, Point (prediction->bbox.x,
-              prediction->bbox.y),
-          Point (prediction->bbox.width + prediction->bbox.x,
-              prediction->bbox.height + prediction->bbox.y), Scalar (clr.blue,
+        rectangle (frameinfo->image, Point (prediction->prediction.bbox.x,
+              prediction->prediction.bbox.y),
+          Point (prediction->prediction.bbox.width + prediction->prediction.bbox.x,
+              prediction->prediction.bbox.height + prediction->prediction.bbox.y), Scalar (clr.blue,
               clr.green, clr.red), kpriv->line_thickness, 1, 0);
       }
 
       if (label_present) {
         /* Draw filled rectangle for label */
-        rectangle (frameinfo->image, Rect (Point (prediction->bbox.x,
-                    prediction->bbox.y - textsize.height), textsize),
+        rectangle (frameinfo->image, Rect (Point (prediction->prediction.bbox.x,
+                    prediction->prediction.bbox.y - textsize.height), textsize),
             Scalar (clr.blue, clr.green, clr.red), FILLED, 1, 0);
 
         /* Draw label text on the filled rectanngle */
         putText (frameinfo->image, label_string,
-            cv::Point (prediction->bbox.x,
-                prediction->bbox.y + frameinfo->y_offset), kpriv->font,
+            cv::Point (prediction->prediction.bbox.x,
+                prediction->prediction.bbox.y + frameinfo->y_offset), kpriv->font,
             kpriv->font_size, Scalar (kpriv->label_color.blue,
                 kpriv->label_color.green, kpriv->label_color.red), 1, 1);
       }
@@ -544,16 +546,20 @@ extern "C"
 
 
     if (infer_meta != NULL) {
-    /* Print the entire prediction tree */
-    pstr = gst_inference_prediction_to_string (infer_meta->prediction);
-    LOG_MESSAGE (LOG_LEVEL_DEBUG, "Prediction tree: \n%s", pstr);
-    free (pstr);
+      /* Print the entire prediction tree */
+      pstr = gst_inference_prediction_to_string (infer_meta->prediction);
+      LOG_MESSAGE (LOG_LEVEL_DEBUG, "Prediction tree: \n%s", pstr);
+      free (pstr);
 
-    g_node_traverse (infer_meta->prediction->predictions, G_PRE_ORDER,
-        G_TRAVERSE_ALL, -1, overlay_node_foreach, kpriv);
+      vvas_treenode_traverse (infer_meta->prediction->prediction.node,
+                              PRE_ORDER,      // VvasTreeNodeTraverseType
+                              TRAVERSE_ALL,   // VvasTreeNodeTraverseFlags
+                              -1,             // max_depth: -1 = whole tree
+                              overlay_node_foreach,
+                              kpriv);
     }
 
-    fps_overlay(kpriv);
+    fps_overlay (kpriv);
     return 0;
   }
 
