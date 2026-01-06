@@ -23,16 +23,6 @@ set(VVAS_INFERMETA_LIB   "${CMAKE_SYSROOT}/usr/lib/libgstvvasinfermeta-3.0.so")
 set(VVAS_STRUCTURE_LIB   "${CMAKE_SYSROOT}/usr/lib/libvvasstructure-3.0.so")
 set(VVAS_COREUTILS_LIB   "${CMAKE_SYSROOT}/usr/lib/libvvascore_utils-1.0.so")
 
-# vvas_xpp library
-add_library(vvas_xpp SHARED src/vvas_xpp_pipeline.c)
-target_include_directories(vvas_xpp PRIVATE ${GSTREAMER_INCLUDE_DIRS})
-target_link_libraries(vvas_xpp
-    jansson
-    ${VVAS_UTIL_LIB}
-    ${VVAS_INFERMETA_LIB}
-)
-install(TARGETS vvas_xpp DESTINATION ${INSTALL_PATH}/lib)
-
 # vvas_airender library
 add_library(vvas_airender SHARED src/vvas_airender.cpp)
 target_include_directories(vvas_airender PRIVATE ${GSTREAMER_INCLUDE_DIRS})
