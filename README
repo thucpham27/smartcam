@@ -459,7 +459,6 @@ If using the command line to invoke the smartcam, stop the process via CTRL-C pr
       | filename | description |
       |----------|-------------|
       |preprocess.json|  Config of preprocess for AI inference|
-      |aiinference.json| Config of AI inference (facedetect\|refinedet\|ssd) |
       |drawresult.json| Config of boundbox drawing |
 
     *  Model files: => /opt/xilinx/kv260-smartcam/share/vitis-ai-library/models

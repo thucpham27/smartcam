@@ -500,6 +500,18 @@ main (int argc, char *argv[])
 
     std::string confdir("/opt/xilinx/kv260-smartcam/share/vvas/");
     confdir += (aitask);
+    std::string model_name;
+    std::string model_class;
+    if (std::string(aitask) == "facedetect") {
+        model_name = "densebox_640_360";
+        model_class = "FACEDETECT";
+    } else if (std::string(aitask) == "ssd") {
+        model_name = "ssd_adas_pruned_0_95";
+        model_class = "SSD";
+    } else if (std::string(aitask) == "refinedet") {
+        model_name = "refinedet_pruned_0_96";
+        model_class = "REFINEDET";
+    }
     char pip[2500];
     pip[0] = '\0';
 
@@ -536,13 +548,13 @@ main (int argc, char *argv[])
         if (!nodet) {
             sprintf(pip + strlen(pip), " ! tee name=t \
                     ! queue ! vvas_xmultisrc kconfig=\"%s/preprocess.json\" \
-                    ! queue ! vvas_xfilter kernels-config=\"%s/aiinference.json\" \
+                    ! queue ! vvas_xinfer model-path=/opt/xilinx/kv260-smartcam/share/vitis_ai_library/models/kv260/%s/%s.xmodel model-name=%s model-class=%s run-time-model=false need-preprocess=false performance-test=false debug-level=0 \
                     ! ima.sink_master \
                     vvas_xmetaaffixer name=ima ima.src_master ! fakesink \
                     t. \
                     ! queue max-size-buffers=1 leaky=%d ! ima.sink_slave_0 ima.src_slave_0 ! queue ! vvas_xfilter kernels-config=\"%s/drawresult.json\" ",
                     confdir.c_str(),
-                    confdir.c_str(),
+                    model_name.c_str(), model_name.c_str(), model_name.c_str(), model_class.c_str(),
                     filename? 0 : 2, confdir.c_str());
         } else if (screenfps){
             sprintf( pip + strlen(pip), " ! queue ! vvas_xfilter kernels-config=\"%s/drawresult.json\" ", confdir.c_str() );

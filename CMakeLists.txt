@@ -32,13 +32,17 @@ SET(INSTALL_PATH "opt/xilinx/kv260-smartcam")
 add_library(vvas_xpp SHARED src/vvas_xpp_pipeline.c)
 target_include_directories(vvas_xpp PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(vvas_xpp
-  jansson vvasutil-2.0 gstvvasinfermeta-2.0)
+  jansson vvasutil-3.0 gstvvasinfermeta-3.0)
 install(TARGETS vvas_xpp DESTINATION ${INSTALL_PATH}/lib)
 
 add_library(vvas_airender SHARED src/vvas_airender.cpp)
 target_include_directories(vvas_airender PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(VVAS_CORE REQUIRED vvas-core)
+
+target_include_directories(vvas_airender PRIVATE ${VVAS_CORE_INCLUDE_DIRS})
 target_link_libraries(vvas_airender 
-    jansson vvasutil-2.0 gstvvasinfermeta-2.0 
+    jansson vvasutil-3.0 gstvvasinfermeta-3.0 ${VVAS_CORE_LIBRARIES}
     gstreamer-1.0 gstbase-1.0 glib-2.0
     opencv_core opencv_video opencv_videoio opencv_imgproc)
 install(TARGETS vvas_airender DESTINATION ${INSTALL_PATH}/lib)

@@ -479,14 +479,13 @@ If using the command line to invoke the smartcam, stop the process via CTRL-C pr
       |`03.file-file.sh` | call smartcam to run facedetction and display on input h264/5 file and generate output h264/5 with detection boxes.|
       |04.file-ssd-dp.sh| call smartcam to run ssd, process the input h264/5 file and display the results with detection boxes DP display.|
 	  
-    * Configuration File Directory: /opt/xilinx/kv260-smartcam/share/vvas/smartcam/${AITASK}
+    * Configuration File Directory: /opt/xilinx/kv260-smartcam/share/vvas/${AITASK}
     
       AITASK = "facedetect" | "refinedet" | "ssd"
 
       | filename | description |
       |----------|-------------|
       |preprocess.json|  Config of preprocess for AI inference|
-      |aiinference.json| Config of AI inference (facedetect\|refinedet\|ssd) |
       |drawresult.json| Config of boundbox drawing |
 
     *  Model files: => /opt/xilinx/kv260-smartcam/share/vitis-ai-library/models
